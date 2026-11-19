@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/example/sui-arb-demo/feed"
+	"github.com/pfoi7/sui-arb-demo/feed"
 )
 
 // dropSource wraps a Source and drops every Nth streamed checkpoint to show

@@ -7,7 +7,7 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/example/sui-arb-demo/clmm"
+	"github.com/pfoi7/sui-arb-demo/clmm"
 )
 
 // syntheticPool is a made-up pool around price 1.0 with three overlapping positions.

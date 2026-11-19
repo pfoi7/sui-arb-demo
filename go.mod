@@ -1,3 +1,3 @@
-module github.com/example/sui-arb-demo
+module github.com/pfoi7/sui-arb-demo
 
 go 1.22
