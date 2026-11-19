@@ -217,6 +217,43 @@ func TestHandlerErrorStops(t *testing.T) {
 	}
 }
 
+func TestGraphQLSource(t *testing.T) {
+	var mu sync.Mutex
+	tip := uint64(500)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Query     string         `json:"query"`
+			Variables map[string]any `json:"variables"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		mu.Lock()
+		defer mu.Unlock()
+		var seq uint64
+		if v, ok := req.Variables["s"]; ok {
+			seq = uint64(v.(float64))
+		} else {
+			tip += 4
+			seq = tip
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"checkpoint": map[string]any{
+			"sequenceNumber": seq, "digest": "d" + strconv.FormatUint(seq, 10), "timestamp": "2026-01-02T03:04:05.678Z",
+		}}})
+	}))
+	defer srv.Close()
+
+	src := NewGraphQLSource(srv.URL)
+	src.PollInterval = time.Millisecond
+	c, err := src.Fetch(context.Background(), 7)
+	if err != nil || c.Seq != 7 || c.TimestampMs != 1767323045678 {
+		t.Fatalf("fetch: %+v %v", c, err)
+	}
+	p := NewProcessor(src, 504, fastCfg())
+	assertSeq(t, runUntil(t, p, 9), 504, 9)
+	if p.Stats().GapsFilled == 0 {
+		t.Fatal("expected backfilled gaps")
+	}
+}
+
 // TestJSONRPCSource exercises the HTTP source against a local fake node.
 func TestJSONRPCSource(t *testing.T) {
 	var mu sync.Mutex

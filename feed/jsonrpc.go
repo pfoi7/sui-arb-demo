@@ -11,7 +11,9 @@ import (
 	"time"
 )
 
-// DefaultRPCURL is the public Sui mainnet fullnode.
+// DefaultRPCURL is the Sui mainnet fullnode JSON-RPC address. Public fullnodes
+// have deprecated JSON-RPC, so this source is intended for self-hosted nodes
+// that still expose it; use GraphQLSource for public endpoints.
 const DefaultRPCURL = "https://fullnode.mainnet.sui.io:443"
 
 // JSONRPCSource implements Source on top of Sui JSON-RPC. Its Stream polls the
@@ -102,35 +104,5 @@ func (s *JSONRPCSource) Fetch(ctx context.Context, seq uint64) (Checkpoint, erro
 
 // Stream polls for new tips starting at fromSeq.
 func (s *JSONRPCSource) Stream(ctx context.Context, fromSeq uint64) (Subscription, error) {
-	return &pollSub{src: s, last: fromSeq, first: true}, nil
+	return newPollSub(s, s.PollInterval, fromSeq), nil
 }
-
-type pollSub struct {
-	src   *JSONRPCSource
-	last  uint64
-	first bool
-}
-
-func (p *pollSub) Recv(ctx context.Context) (Checkpoint, error) {
-	for {
-		tip, err := p.src.LatestSeq(ctx)
-		if err != nil {
-			return Checkpoint{}, err
-		}
-		if p.first || tip > p.last {
-			p.first = false
-			if tip < p.last {
-				tip = p.last
-			}
-			p.last = tip
-			return p.src.Fetch(ctx, tip)
-		}
-		select {
-		case <-ctx.Done():
-			return Checkpoint{}, ctx.Err()
-		case <-time.After(p.src.PollInterval):
-		}
-	}
-}
-
-func (p *pollSub) Close() error { return nil }

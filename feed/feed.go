@@ -15,7 +15,7 @@ type Checkpoint struct {
 	Seq         uint64
 	Digest      string
 	TimestampMs uint64
-	TxCount     int
+	TxCount     int // -1 if the source does not report it
 }
 
 // Subscription is a live stream of checkpoints. Recv blocks until the next
